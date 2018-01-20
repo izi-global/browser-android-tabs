@@ -227,6 +227,10 @@ CHAR-LIMIT guidelines:
       <message name="IDS_TRY_AGAIN" desc="The label for a button allowing the user to try an action again. [CHAR-LIMIT=20]">
         Try again
       </message>
+      <!-- Sync preferences -->
+      <message name="IDS_PREFS_SYNC" desc="Title for the Sync preferences. [CHAR-LIMIT=32]">
+        Sync
+      </message>
 
       <!-- Main Preferences -->
       <message name="IDS_PREFERENCES" desc="Title for Brave's Settings.">
