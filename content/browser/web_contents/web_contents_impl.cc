@@ -4392,7 +4392,6 @@ void WebContentsImpl::OnUpdateFaviconURL(
   // for the new page has committed.
   if (!source->IsCurrent())
     return;
-
   for (auto& observer : observers_)
     observer.DidUpdateFaviconURL(candidates);
 }
