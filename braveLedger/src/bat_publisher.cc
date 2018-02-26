@@ -454,6 +454,7 @@ void BatPublisher::synopsisNormalizer() {
     base::Unretained(this)));
 }
 
+// courtesy of @dimitry-xyz: https://github.com/brave/ledger/issues/2#issuecomment-221752002
 double BatPublisher::concaveScore(const uint64_t& duration) {
   return (std::sqrt(b2_ + a4_ * duration) - b_) / (double)a2_;
 }

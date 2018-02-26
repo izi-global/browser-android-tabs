@@ -64,6 +64,7 @@ namespace bat_client {
         BatHelper::FetchCallback callback,
         const std::vector<std::string>& headers, const std::string& content,
         const std::string& contentType, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+    LOG(ERROR) << "!!!web_request URL == " + url;
     content::BrowserThread::PostTask(
       content::BrowserThread::UI, FROM_HERE,
       base::Bind(&BatClientWebRequest::runOnThread,
