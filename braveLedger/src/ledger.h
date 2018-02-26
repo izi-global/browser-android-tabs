@@ -41,10 +41,14 @@ public:
   std::string getETHAddress();
   std::string getLTCAddress();
 
+  void getBalance();
+  void run(const uint64_t& delayTime);
+
 private:
   bool isBatClientExist();
   bool isBatPublisherExist();
   void publisherInfoCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData);
+  void walletPropertiesCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData);
 
   bat_client::BatClient* bat_client_;
   bat_publisher::BatPublisher* bat_publisher_;

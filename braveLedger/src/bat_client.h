@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include "bat_balance.h"
 #include "bat_client_webrequest.h"
 #include "bat_helper.h"
 #include "base/callback.h"
@@ -34,10 +35,19 @@ public:
   std::string getETHAddress();
   std::string getLTCAddress();
 
+  void getWalletProperties(BatHelper::FetchCallback callback,
+    const FETCH_CALLBACK_EXTRA_DATA_ST& extraData);
+
+  bool isReadyForReconcile();
+  void reconcile(const std::string& viewingId);
+
 private:
   void loadStateOrRegisterPersonaCallback(bool result, const CLIENT_STATE_ST& state);
   void registerPersona();
   void publisherTimestamp(const bool& saveState = true);
+  void reconcileCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData);
+  void currentReconcile();
+  void currentReconcileCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData);
 
   std::string buildURL(const std::string& path, const std::string& prefix);
 
@@ -47,6 +57,8 @@ private:
   std::string preFlight_;
   uint64_t publisherTimestamp_;
   std::mutex state_mutex_;
+  bat_balance::BatBalance balance_;
+  CURRENT_RECONCILE currentReconcile_;
 };
 }
 

@@ -13,6 +13,7 @@ static_library("braveLedger") {
     "src/bat_client_webrequest.cc",
     "src/bat_helper.cc",
     "src/bat_publisher.cc",
+    "src/bat_balance.cc",
     "src/tweetnacl.cc",
   ]
 
