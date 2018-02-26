@@ -8,15 +8,21 @@
 #define LEDGER_STAGING_SERVER           "https://ledger-staging.mercury.basicattentiontoken.org"
 #define LEDGER_PRODUCTION_SERVER        "https://ledger.mercury.basicattentiontoken.org"
 #define LEDGER_PRODUCTION_PROXY_SERVER  "https://mercury-proxy.privateinternetaccess.com"
+#define BALANCE_STAGING_SERVER          "https://balance-staging.mercury.basicattentiontoken.org"
+#define BALANCE_PRODUCTION_SERVER       "https://balance.mercury.basicattentiontoken.org"
 
 #define PREFIX_V2                       "/v2"
 #define PREFIX_V3                       "/v3"
 #define REGISTER_PERSONA                "/registrar/persona"
 #define PUBLISHER_TIMESTAMP             "/publisher/timestamp"
 #define PUBLISHER_INFO                  "/publisher/identity?publisher="
+#define WALLET_PROPERTIES               "/v2/wallet/"
+#define WALLET_PROPERTIES_END           "/balance"
+#define RECONCILE_CONTRIBUTION          "/surveyor/contribution/current/"
 
 #define REGISTRARVK_FIELDNAME           "registrarVK"
 #define VERIFICATION_FIELDNAME          "verification"
+#define SURVEYOR_ID                     "surveyorId"
 
 #define CURRENCY                        "BAT"
 

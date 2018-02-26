@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "base/callback.h"
 
@@ -93,6 +94,20 @@ struct PUBLISHER_DATA_ST {
   unsigned int secondsSpent_;
 };
 
+struct WALLET_PROPERTIES_ST {
+  WALLET_PROPERTIES_ST();
+  ~WALLET_PROPERTIES_ST();
+
+  std::string altcurrency_;
+  double balance_;
+  std::map<std::string, double> rates_;
+  std::string parameters_currency_;
+  double parameters_fee_;
+  std::vector<double> parameters_choices_;
+  std::vector<double> parameters_range_;
+  unsigned int parameters_days_;
+};
+
 struct FETCH_CALLBACK_EXTRA_DATA_ST {
   FETCH_CALLBACK_EXTRA_DATA_ST();
   ~FETCH_CALLBACK_EXTRA_DATA_ST();
@@ -101,6 +116,23 @@ struct FETCH_CALLBACK_EXTRA_DATA_ST {
   std::string string1;
   bool boolean1;
 };
+
+struct SURVEYOR_INFO_ST {
+  SURVEYOR_INFO_ST();
+  ~SURVEYOR_INFO_ST();
+
+  std::string surveyorId_;
+};
+
+struct CURRENT_RECONCILE {
+  CURRENT_RECONCILE();
+  ~CURRENT_RECONCILE();
+
+  std::string viewingId_;
+  SURVEYOR_INFO_ST surveyorInfo_;
+  uint64_t timestamp_;
+};
+
 
 class BatHelper {
 public:
@@ -116,6 +148,7 @@ public:
   static void getJSONPublisher(const std::string& json, PUBLISHER_ST& publisher_st);
   static void getJSONPublisherTimeStamp(const std::string& json, uint64_t& publisherTimestamp);
   static void getJSONPublisherVerified(const std::string& json, bool& verified);
+  static void getJSONWalletProperties(const std::string& json, WALLET_PROPERTIES_ST& walletProperties);
   static std::vector<uint8_t> generateSeed();
   static std::vector<uint8_t> getHKDF(const std::vector<uint8_t>& seed);
   static void getPublicKeyFromSeed(const std::vector<uint8_t>& seed,

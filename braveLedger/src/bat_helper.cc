@@ -85,10 +85,20 @@ PUBLISHER_DATA_ST::PUBLISHER_DATA_ST(const PUBLISHER_DATA_ST& publisherData) :
   secondsSpent_(publisherData.secondsSpent_) {}
 PUBLISHER_DATA_ST::~PUBLISHER_DATA_ST() {}
 
+WALLET_PROPERTIES_ST::WALLET_PROPERTIES_ST() {}
+WALLET_PROPERTIES_ST::~WALLET_PROPERTIES_ST() {}
+
 FETCH_CALLBACK_EXTRA_DATA_ST::FETCH_CALLBACK_EXTRA_DATA_ST():
   value1(0),
   boolean1(true) {}
 FETCH_CALLBACK_EXTRA_DATA_ST::~FETCH_CALLBACK_EXTRA_DATA_ST() {}
+
+SURVEYOR_INFO_ST::SURVEYOR_INFO_ST() {}
+SURVEYOR_INFO_ST::~SURVEYOR_INFO_ST() {}
+
+CURRENT_RECONCILE::CURRENT_RECONCILE() :
+  timestamp_(0) {}
+CURRENT_RECONCILE::~CURRENT_RECONCILE() {}
 
 
 
@@ -239,6 +249,80 @@ void BatHelper::getJSONState(const std::string& json, CLIENT_STATE_ST& state) {
     value->GetAsString(&keyInfoSeed);
     DCHECK(!keyInfoSeed.empty());
     state.walletInfo_.keyInfoSeed_ = BatHelper::getFromBase64(keyInfoSeed);
+  }
+}
+
+void BatHelper::getJSONWalletProperties(const std::string& json, WALLET_PROPERTIES_ST& walletProperties) {
+  std::unique_ptr<base::Value> json_object = base::JSONReader::Read(json);
+  if (nullptr == json_object.get()) {
+      LOG(ERROR) << "BatHelper::getJSONWalletProperties: incorrect json object";
+
+      return;
+  }
+
+  const base::DictionaryValue* childTopDictionary = nullptr;
+  json_object->GetAsDictionary(&childTopDictionary);
+  if (nullptr == childTopDictionary) {
+      return;
+  }
+  const base::Value* value = nullptr;
+  if (childTopDictionary->Get("altcurrency", &value)) {
+    value->GetAsString(&walletProperties.altcurrency_);
+  }
+  if (childTopDictionary->Get("balance", &value)) {
+    value->GetAsDouble(&walletProperties.balance_);
+  }
+  if (childTopDictionary->Get("rates.ETH", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    walletProperties.rates_.insert(std::pair<std::string, double>("ETH", dValue));
+  }
+  if (childTopDictionary->Get("rates.LTC", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    walletProperties.rates_.insert(std::pair<std::string, double>("LTC", dValue));
+  }
+  if (childTopDictionary->Get("rates.BTC", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    walletProperties.rates_.insert(std::pair<std::string, double>("BTC", dValue));
+  }
+  if (childTopDictionary->Get("rates.USD", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    walletProperties.rates_.insert(std::pair<std::string, double>("USD", dValue));
+  }
+  if (childTopDictionary->Get("rates.EUR", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    walletProperties.rates_.insert(std::pair<std::string, double>("EUR", dValue));
+  }
+  if (childTopDictionary->Get("parameters.adFree.currency", &value)) {
+    value->GetAsString(&walletProperties.parameters_currency_);
+  }
+  if (childTopDictionary->Get("parameters.adFree.fee.BAT", &value)) {
+    value->GetAsDouble(&walletProperties.parameters_fee_);
+  }
+  if (childTopDictionary->Get("parameters.adFree.choices.BAT", &value)) {
+    const base::ListValue *lValue = nullptr;
+    value->GetAsList(&lValue);
+    for (size_t i = 0; i < lValue->GetSize(); i++) {
+      double tempValue = 0;
+      lValue->GetDouble(i, &tempValue);
+      walletProperties.parameters_choices_.push_back(tempValue);
+    }
+  }
+  if (childTopDictionary->Get("parameters.adFree.range.BAT", &value)) {
+    const base::ListValue *lValue = nullptr;
+    value->GetAsList(&lValue);
+    for (size_t i = 0; i < lValue->GetSize(); i++) {
+      double tempValue = 0;
+      lValue->GetDouble(i, &tempValue);
+      walletProperties.parameters_range_.push_back(tempValue);
+    }
+  }
+  if (childTopDictionary->Get("parameters.adFree.days", &value)) {
+    value->GetAsInteger((int*)&walletProperties.parameters_days_);
   }
 }
 
@@ -675,12 +759,7 @@ void BatHelper::writeStateFile(const std::string& data) {
 }
 
 void BatHelper::readStateFile(BatHelper::ReadStateCallback callback) {
-  // to do debug
-  CLIENT_STATE_ST state;
-  BatHelper::getJSONState("{\"bootStamp\":\"1513801479000\",\"days\":30,\"fee_amount\":5.0,\"fee_currency\":\"USD\",\"masterUserToken\":\"==========ANONLOGIN_CRED_BEG==========\n6d1219ab4ac45a5928323eb196ed62a\n877tj628PcvlP1zchf9Aqdcdd5vanNWcWA6W38frVWt\n8jgv5COUICuE2dsT9/pCfDWzgnyqsEdIpxyBjsrguOE 8PLZV85uw+e0xMqx57jIxvTdbTfV3TjGgO5r18x7Ibw 1\n1oJSttLRXBNE9D5PJjCuBWaAmt/s+sPzochwRCtYCp+\n6cvYviG1DoeDDYEXFFGxbT8cqGbxZs44ln9KiwGzVGe\n===========ANONLOGIN_CRED_END==========\",\"personaId\":\"6d1219ab-4ac4-45a5-9283-23eb196ed62a\",\"reconcileStamp\":\"1516393479000\",\"registrarVK\":\"==========ANONLOGIN_VK_BEG==========\nx3EmZXFb2jD7OocZz6l7o638S45k2kKrX5BrWp1Ox+ ANJXSauJVPNHKl/mmakFwxbkwJkJzfXe+c9+jxFtuX6 1\n5xMuqWE8J7HIHbW/UEJwFELYjTWRF10x7LMd7s46MVT 4DC6LqGM8zLz1pCsHA3qab48gkpeiQpNZAdb9owFvU6 \n1tADCD6LdrEDQQDhRy1ijjAfhV9uKwlKKuhD6xXyPAZ BLOzUy+ZZh48riPnAHnUGal+ceCclccZXmoXXx92WHW 1\n7VRDst4U4iaT/9QNCwajEaqgRNtKPV1Dp5QuMjP019h HucbxBMGGAZBNLXGzfKsTlF+wAdmOFAvBRAo8i2Azd 1\n5SLk8SphICEkF+CNhN5g7IX2ih+Tb6w14LLlwupKw7y 96ANsdHzg0pwo2DDWOyAh1YPnION196pIT9xwISFZTA 3ef5G5d2c8cctdK4LuaxlSeEf1OZ100Sy5un5EjuHJB 77yFnY61GM7PHd6q3TLs2QS6c9PfrXD2idxaFq2DMd 1 0\n===========ANONLOGIN_VK_END==========\",\"settings\":\"adFree\",\"userId\":\"6d1219ab4ac45a5928323eb196ed62a\",\"wallet_info\":{\"addressBAT\":\"0xb6D2Ce629970fa023cE94071a13DBb3a0B7Ad615\",\"addressBTC\":\"moHQRnXhUAgmj3Cx9sWPsViAFiYM1KrFdp\",\"addressCARD_ID\":\"ede6ca9b-0dcb-4c3c-9dc2-6fca2ca6763c\",\"addressETH\":\"0xb6D2Ce629970fa023cE94071a13DBb3a0B7Ad615\",\"addressLTC\":\"moRTAecPfzphfs4zTzKT7Fxb82qAeL5htM\",\"keyInfoSeed_\":\"KFU2+vesyrQNNykr1U+Bz5LVflIjLHfJ/ZNT5R3ShEY=\",\"paymentId\":\"4b0b878c-e2aa-4725-845b-66c5fb0ff3c5\"}}", state);
-  callback.Run(true, state);
-  //
-  /*base::FilePath dirToSave;
+  base::FilePath dirToSave;
   base::PathService::Get(base::DIR_HOME, &dirToSave);
   dirToSave = dirToSave.Append(LEDGER_STATE_FILENAME);
   int64_t file_size = 0;
@@ -700,7 +779,7 @@ void BatHelper::readStateFile(BatHelper::ReadStateCallback callback) {
     return;
   }
 
-  callback.Run(false, CLIENT_STATE_ST());*/
+  callback.Run(false, CLIENT_STATE_ST());
 }
 
 void BatHelper::writePublisherStateFile(const std::string& data) {

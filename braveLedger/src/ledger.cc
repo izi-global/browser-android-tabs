@@ -6,6 +6,7 @@
 #include "bat_client.h"
 #include "bat_publisher.h"
 #include "base/bind.h"
+#include "base/guid.h"
 
 #include "logging.h"
 
@@ -64,6 +65,27 @@ namespace ledger {
     return true;
   }
 
+  void Ledger::getBalance() {
+    if (!isBatClientExist()) {
+      assert(false);
+
+      return;
+    }
+    FETCH_CALLBACK_EXTRA_DATA_ST extraData;
+    bat_client_->getWalletProperties(base::Bind(&Ledger::walletPropertiesCallback,
+      base::Unretained(this)), extraData);
+  }
+
+  void Ledger::walletPropertiesCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+    if (!result) {
+      // TODO errors handling
+      return;
+    }
+    WALLET_PROPERTIES_ST walletProperties;
+    BatHelper::getJSONWalletProperties(response, walletProperties);
+    // TODO send the balance to the UI via observer or callback
+  }
+
   void Ledger::saveVisit(const std::string& publisher, const uint64_t& duration) {
     if (!isBatPublisherExist()) {
       assert(false);
@@ -106,6 +128,10 @@ namespace ledger {
       return;
     }
     bat_publisher_->setPublisherTimestampVerified(extraData.string1, extraData.value1, verified);
+    //to do debug
+    LOG(ERROR) << "!!!reconcile";
+    run(0);
+    //
   }
 
   void Ledger::favIconUpdated(const std::string& publisher, const std::string& favicon_url) {
@@ -214,6 +240,18 @@ namespace ledger {
       return "";
     }
     return bat_client_->getLTCAddress();
+  }
+
+  void Ledger::run(const uint64_t& delayTime) {
+    // That function should be triggeres from the main process periodically to make payments
+    if (!isBatClientExist()) {
+      assert(false);
+
+      return;
+    }
+    if (bat_client_->isReadyForReconcile()) {
+      bat_client_->reconcile(base::GenerateGUID());
+    }
   }
 
 }

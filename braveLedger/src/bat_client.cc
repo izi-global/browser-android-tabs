@@ -196,4 +196,52 @@ std::string BatClient::getLTCAddress() {
   return state_.walletInfo_.addressLTC_;
 }
 
+void BatClient::getWalletProperties(BatHelper::FetchCallback callback,
+    const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  balance_.getWalletProperties(state_.walletInfo_.paymentId_, callback, extraData);
+}
+
+bool BatClient::isReadyForReconcile() {
+  // TODO real check of reconcile timestamp
+  return true;
+}
+
+void BatClient::reconcile(const std::string& viewingId) {
+  FETCH_CALLBACK_EXTRA_DATA_ST extraData;
+  extraData.string1 = viewingId;
+  batClientWebRequest_.run(buildURL((std::string)RECONCILE_CONTRIBUTION + state_.userId_, PREFIX_V2),
+    base::Bind(&BatClient::reconcileCallback,
+      base::Unretained(this)), std::vector<std::string>(), "", "", FETCH_CALLBACK_EXTRA_DATA_ST());
+}
+
+void BatClient::reconcileCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  if (!result) {
+    // TODO errors handling
+    return;
+  }
+  currentReconcile_.viewingId_ = extraData.string1;
+  currentReconcile_.surveyorInfo_.surveyorId_ = BatHelper::getJSONValue(SURVEYOR_ID, response);
+
+  //LOG(ERROR) << "!!!surveyorId_ == " + currentReconcile_.surveyorInfo_.surveyorId_;
+  currentReconcile();
+}
+
+void BatClient::currentReconcile() {
+  std::ostringstream amount;
+  amount << state_.fee_amount_;
+  std::string path = (std::string)WALLET_PROPERTIES + state_.walletInfo_.paymentId_ + "?refresh=true&amount=" + amount.str() + "&currency=" + state_.fee_currency_;
+  FETCH_CALLBACK_EXTRA_DATA_ST extraData;
+  batClientWebRequest_.run(buildURL(path, ""),
+    base::Bind(&BatClient::currentReconcileCallback,
+      base::Unretained(this)), std::vector<std::string>(), "", "", FETCH_CALLBACK_EXTRA_DATA_ST());
+}
+
+void BatClient::currentReconcileCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  LOG(ERROR) << "!!!response == " + response;
+  if (!result) {
+    // TODO errors handling
+    return;
+  }
+}
+
 }
