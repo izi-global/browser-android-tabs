@@ -35,6 +35,7 @@ namespace ledger {
     if (!bat_client_) {
       bat_client_ = new BatClient();
     }
+    LOG(ERROR) << "!!!here2";
     bat_client_->loadStateOrRegisterPersona();
   }
 
@@ -104,6 +105,10 @@ namespace ledger {
     }
     uint64_t publisherTimestamp = bat_client_->getPublisherTimestamp();
     if (publisherTimestamp <= verifiedTimestamp) {
+      //to do debug
+      LOG(ERROR) << "!!!reconcile";
+      run(0);
+      //
       return;
     }
     FETCH_CALLBACK_EXTRA_DATA_ST extraData;
