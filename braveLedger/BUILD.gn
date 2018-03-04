@@ -28,6 +28,10 @@ static_library("braveLedger") {
     "//base",
     "//net",
     "//anonize2",
+    "//v8",
+    "//net:net_utility_services",
+    "//net:net_with_v8",
+    "//v8:v8_libplatform",
   ]
 
   include_dirs += [
@@ -35,6 +39,7 @@ static_library("braveLedger") {
     "//net/url_request",
     "//content/public/browser",
     "//third_party/leveldatabase/src/include",
+    "//v8",
   ]
 
   defines = [ "LEDGER_LIBRARY" ]

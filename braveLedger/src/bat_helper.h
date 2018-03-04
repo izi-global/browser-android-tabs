@@ -25,6 +25,28 @@ struct REQUEST_CREDENTIALS_ST {
   std::string request_headers_signature_;
 };
 
+struct UNSIGNED_TX {
+  UNSIGNED_TX();
+  ~UNSIGNED_TX();
+
+  std::string amount_;
+  std::string currency_;
+  std::string destination_;
+};
+
+struct RECONCILE_PAYLOAD_ST {
+  RECONCILE_PAYLOAD_ST();
+  ~RECONCILE_PAYLOAD_ST();
+
+  std::string requestType_;
+  std::string request_signedtx_headers_digest_;
+  std::string request_signedtx_headers_signature_;
+  UNSIGNED_TX request_signedtx_body_;
+  std::string request_signedtx_octets_;
+  std::string request_viewingId_;
+  std::string request_surveyorId_;
+};
+
 struct WALLET_INFO_ST {
   WALLET_INFO_ST();
   ~WALLET_INFO_ST();
@@ -133,6 +155,11 @@ struct CURRENT_RECONCILE {
   uint64_t timestamp_;
 };
 
+enum URL_METHOD {
+  GET = 0,
+  PUT = 1,
+  POST = 2
+};
 
 class BatHelper {
 public:
@@ -149,6 +176,7 @@ public:
   static void getJSONPublisherTimeStamp(const std::string& json, uint64_t& publisherTimestamp);
   static void getJSONPublisherVerified(const std::string& json, bool& verified);
   static void getJSONWalletProperties(const std::string& json, WALLET_PROPERTIES_ST& walletProperties);
+  static void getJSONUnsignedTx(const std::string& json, UNSIGNED_TX& unsignedTx);
   static std::vector<uint8_t> generateSeed();
   static std::vector<uint8_t> getHKDF(const std::vector<uint8_t>& seed);
   static void getPublicKeyFromSeed(const std::vector<uint8_t>& seed,
@@ -156,9 +184,11 @@ public:
   static std::string uint8ToHex(const std::vector<uint8_t>& in);
   static std::string stringify(std::string* keys, std::string* values, const unsigned int& size);
   static std::string stringifyRequestCredentialsSt(const REQUEST_CREDENTIALS_ST& request_credentials);
+  static std::string stringifyReconcilePayloadSt(const RECONCILE_PAYLOAD_ST& reconcile_payload);
   static std::string stringifyState(const CLIENT_STATE_ST& state);
   static std::string stringifyPublisherState(const PUBLISHER_STATE_ST& state);
-  static std::string stringifyPublisher(PUBLISHER_ST& publisher_st);
+  static std::string stringifyPublisher(const PUBLISHER_ST& publisher_st);
+  static std::string stringifyUnsignedTx(const UNSIGNED_TX& unsignedTx);
   static std::vector<uint8_t> getSHA256(const std::string& in);
   static std::string getBase64(const std::vector<uint8_t>& in);
   static std::vector<uint8_t> getFromBase64(const std::string& in);
@@ -178,6 +208,11 @@ public:
   static void writePublisherStateFile(const std::string& data);
   // We have to implement different function for iOS, probably laptop
   static void readPublisherStateFile(BatHelper::ReadPublisherStateCallback callback);
+
+  // to do debug
+  static void readEmscripten();
+  static void readEmscriptenInternal();
+  //
 
 private:
   BatHelper();
