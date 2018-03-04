@@ -27,9 +27,20 @@
 #include <iomanip>
 #include <ctime>
 
+// to do debug
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include "base/android/apk_assets.h"
+//#include "v8/include/v8.h"
+//#include "v8/include/libplatform/libplatform.h"
+//
+
 
 REQUEST_CREDENTIALS_ST::REQUEST_CREDENTIALS_ST() {}
 REQUEST_CREDENTIALS_ST::~REQUEST_CREDENTIALS_ST() {}
+
+RECONCILE_PAYLOAD_ST::RECONCILE_PAYLOAD_ST() {}
+RECONCILE_PAYLOAD_ST::~RECONCILE_PAYLOAD_ST() {}
 
 WALLET_INFO_ST::WALLET_INFO_ST() {}
 WALLET_INFO_ST::~WALLET_INFO_ST() {}
@@ -99,6 +110,9 @@ SURVEYOR_INFO_ST::~SURVEYOR_INFO_ST() {}
 CURRENT_RECONCILE::CURRENT_RECONCILE() :
   timestamp_(0) {}
 CURRENT_RECONCILE::~CURRENT_RECONCILE() {}
+
+UNSIGNED_TX::UNSIGNED_TX() {}
+UNSIGNED_TX::~UNSIGNED_TX() {}
 
 
 
@@ -323,6 +337,32 @@ void BatHelper::getJSONWalletProperties(const std::string& json, WALLET_PROPERTI
   }
   if (childTopDictionary->Get("parameters.adFree.days", &value)) {
     value->GetAsInteger((int*)&walletProperties.parameters_days_);
+  }
+}
+
+void BatHelper::getJSONUnsignedTx(const std::string& json, UNSIGNED_TX& unsignedTx) {
+  std::unique_ptr<base::Value> json_object = base::JSONReader::Read(json);
+  if (nullptr == json_object.get()) {
+      LOG(ERROR) << "BatHelper::getJSONUnsignedTx: incorrect json object";
+
+      return;
+  }
+
+  const base::DictionaryValue* childTopDictionary = nullptr;
+  json_object->GetAsDictionary(&childTopDictionary);
+  if (nullptr == childTopDictionary) {
+      return;
+  }
+
+  const base::Value* value = nullptr;
+  if (childTopDictionary->Get("unsignedTx.denomination.amount", &value)) {
+    value->GetAsString(&unsignedTx.amount_);
+  }
+  if (childTopDictionary->Get("unsignedTx.denomination.currency", &value)) {
+    value->GetAsString(&unsignedTx.currency_);
+  }
+  if (childTopDictionary->Get("unsignedTx.destination", &value)) {
+    value->GetAsString(&unsignedTx.destination_);
   }
 }
 
@@ -594,6 +634,21 @@ std::string BatHelper::stringify(std::string* keys,
   return res;
 }
 
+std::string BatHelper::stringifyUnsignedTx(const UNSIGNED_TX& unsignedTx) {
+  std::string res;
+
+  base::DictionaryValue root_dict;
+  std::unique_ptr<base::DictionaryValue> denomination_dict(new base::DictionaryValue());
+  denomination_dict->SetString("amount", unsignedTx.amount_);
+  denomination_dict->SetString("currency", unsignedTx.currency_);
+  root_dict.Set("denomination", std::move(denomination_dict));
+  root_dict.SetString("destination", unsignedTx.destination_);
+
+  base::JSONWriter::Write(root_dict, &res);
+
+  return res;
+}
+
 std::string BatHelper::stringifyRequestCredentialsSt(const REQUEST_CREDENTIALS_ST& request_credentials) {
   std::string res;
 
@@ -614,6 +669,35 @@ std::string BatHelper::stringifyRequestCredentialsSt(const REQUEST_CREDENTIALS_S
   root_dict.SetString("proof", request_credentials.proof_);
 
   base::JSONWriter::Write(root_dict, &res);
+
+  return res;
+}
+
+std::string BatHelper::stringifyReconcilePayloadSt(const RECONCILE_PAYLOAD_ST& reconcile_payload) {
+  std::string res;
+
+  base::DictionaryValue root_dict;
+  root_dict.SetString("requestType", reconcile_payload.requestType_);
+  std::unique_ptr<base::DictionaryValue> signedTx_dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> signedTx_headers_dict(new base::DictionaryValue());
+  signedTx_headers_dict->SetString("digest", reconcile_payload.request_signedtx_headers_digest_);
+  signedTx_headers_dict->SetString("signature", reconcile_payload.request_signedtx_headers_signature_);
+  signedTx_dict->Set("headers", std::move(signedTx_headers_dict));
+  std::unique_ptr<base::DictionaryValue> signedTx_body_dict(new base::DictionaryValue());
+  std::unique_ptr<base::DictionaryValue> signedTx_body_denomination_dict(new base::DictionaryValue());
+  signedTx_body_denomination_dict->SetString("amount", reconcile_payload.request_signedtx_body_.amount_);
+  signedTx_body_denomination_dict->SetString("currency", reconcile_payload.request_signedtx_body_.currency_);
+  signedTx_body_dict->Set("denomination", std::move(signedTx_body_denomination_dict));
+  signedTx_body_dict->SetString("destination", reconcile_payload.request_signedtx_body_.destination_);
+  signedTx_dict->Set("body", std::move(signedTx_body_dict));
+  signedTx_dict->SetString("octets", reconcile_payload.request_signedtx_octets_);
+  root_dict.Set("signedTx", std::move(signedTx_dict));
+  root_dict.SetString("surveyorId", reconcile_payload.request_surveyorId_);
+  root_dict.SetString("viewingId", reconcile_payload.request_viewingId_);
+
+  base::JSONWriter::Write(root_dict, &res);
+
+  LOG(ERROR) << "!!!json == " << res;
 
   return res;
 }
@@ -660,7 +744,7 @@ std::string BatHelper::stringifyPublisherState(const PUBLISHER_STATE_ST& state) 
   return res;
 }
 
-std::string BatHelper::stringifyPublisher(PUBLISHER_ST& publisher_st) {
+std::string BatHelper::stringifyPublisher(const PUBLISHER_ST& publisher_st) {
   std::string res;
 
   base::DictionaryValue root_dict;
@@ -816,6 +900,7 @@ void BatHelper::readPublisherStateFile(BatHelper::ReadPublisherStateCallback cal
 
 void BatHelper::saveState(const CLIENT_STATE_ST& state) {
   std::string data = BatHelper::stringifyState(state);
+  LOG(ERROR) << "!!!saveState == " << data;
   scoped_refptr<base::SequencedTaskRunner> task_runner =
      base::CreateSequencedTaskRunnerWithTraits(
          {base::MayBlock(), base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN});
@@ -845,3 +930,101 @@ void BatHelper::loadPublisherState(BatHelper::ReadPublisherStateCallback callbac
          {base::MayBlock(), base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN});
   task_runner->PostTask(FROM_HERE, base::Bind(&BatHelper::readPublisherStateFile, callback));
 }
+
+// Enable emscripten calls
+/*void BatHelper::readEmscriptenInternal() {
+  base::MemoryMappedFile::Region region_out;
+  int fd_out = base::android::OpenApkAsset("assets/anonize2-jumbo.mp3", &region_out);
+  if (fd_out < 0) {
+    LOG(ERROR) << "readEmscripten error: Cannot open assets/anonize2-jumbo.dat";
+    return;
+  }
+
+  base::File file(fd_out);
+  base::MemoryMappedFile* adblock_mmap_ = new base::MemoryMappedFile();
+  if (!adblock_mmap_->Initialize(std::move(file), region_out)) {
+    LOG(ERROR) << "InitAdBlock: Cannot init memory mapped file";
+    return;
+  }
+  std::vector<char> data(adblock_mmap_->length() + 1);
+  ::memcpy(&data.front(), adblock_mmap_->data(), adblock_mmap_->length());
+  data[adblock_mmap_->length()] = '\0';
+  //LOG(ERROR) << "!!!file == " << &data.front();
+  LOG(ERROR) << "!!!length == " << data.size();
+  delete adblock_mmap_;
+
+  std::string toExecute = (std::string)&data.front() + "\r\nvar init = cwrap('initAnonize', '', '')\r\ninit()";
+  toExecute += "\r\nvar makeCred = cwrap('makeCred', 'string', [ 'string' ])\r\nmakeCred('6d1219ab4ac45a5928323eb196ed62a')";
+
+  // V8 init
+  v8::V8::InitializeICU();
+//  v8::Platform *platform = v8::platform::CreateDefaultPlatform();
+//  v8::V8::InitializePlatform(platform);
+
+  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+  v8::V8::InitializePlatform(platform.get());
+
+  v8::V8::Initialize();
+
+  v8::Isolate::CreateParams create_params;
+  create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+
+  // Create a new Isolate and make it the current one.
+  v8::Isolate* isolate = v8::Isolate::New(create_params);
+
+  //v8::Persistent<v8::String> test;
+
+  {
+    v8::Isolate::Scope isolate_scope(isolate);
+
+    // Create a stack-allocated handle scope.
+    v8::HandleScope handle_scope(isolate);
+
+    // Create a new context.
+    v8::Local<v8::Context> context = v8::Context::New(isolate);
+
+    // Enter the context for compiling and running the hello world script.
+    v8::Context::Scope context_scope(context);
+
+
+    //test.Reset(isolate, v8::String::NewFromUtf8(isolate, "Hello' + ', World!'"));
+    //test.SetWeak(&test, weak_callback, v8::WeakCallbackType::kParameter);
+
+
+    // Create a string containing the JavaScript source code.
+    v8::Local<v8::String> source = v8::String::NewFromUtf8(isolate, (const char*)toExecute.c_str());
+
+    // Compile the source code.
+    v8::TryCatch try_catch(isolate);
+
+    // Compile the script and check for errors.
+    v8::Local<v8::Script> compiled_script;
+    if (!v8::Script::Compile(context, source).ToLocal(&compiled_script)) {
+      v8::String::Utf8Value error(isolate, try_catch.Exception());
+      LOG(ERROR) << "!!!error == " << *error;
+      // The script failed to compile; bail out.
+    }
+
+    // Run the script to get the result.
+    v8::Local<v8::Value> result = compiled_script->Run();
+
+    // Convert the result to an UTF8 string and print it.
+    v8::String::Utf8Value utf8(isolate, result);
+    LOG(ERROR) << "!!!result == " << *utf8;
+  }
+
+  isolate->LowMemoryNotification();
+
+  // Dispose the isolate and tear down V8.
+  isolate->Dispose();
+  v8::V8::Dispose();
+  v8::V8::ShutdownPlatform();
+}
+
+void BatHelper::readEmscripten() {
+  scoped_refptr<base::SequencedTaskRunner> task_runner =
+     base::CreateSequencedTaskRunnerWithTraits(
+         {base::MayBlock(), base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN});
+  task_runner->PostTask(FROM_HERE, base::Bind(&BatHelper::readEmscriptenInternal));
+}*/
+//
