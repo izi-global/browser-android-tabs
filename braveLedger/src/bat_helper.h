@@ -60,6 +60,23 @@ struct WALLET_INFO_ST {
   std::vector<uint8_t> keyInfoSeed_;
 };
 
+struct TRANSACTION_ST {
+  TRANSACTION_ST();
+  TRANSACTION_ST(const TRANSACTION_ST& transaction);
+  ~TRANSACTION_ST();
+
+  std::string viewingId_;
+  std::string surveyorId_;
+  std::string contribution_fiat_amount_;
+  std::string contribution_fiat_currency_;
+  std::map<std::string, double> contribution_rates_;
+  std::string contribution_altcurrency_;
+  std::string contribution_probi_;
+  std::string contribution_fee_;
+  std::string submissionStamp_;
+  std::string submissionId_;
+};
+
 struct CLIENT_STATE_ST {
   CLIENT_STATE_ST();
   ~CLIENT_STATE_ST();
@@ -75,6 +92,9 @@ struct CLIENT_STATE_ST {
   std::string settings_;
   double fee_amount_;
   unsigned int days_;
+  std::vector<TRANSACTION_ST> transactions_;
+  std::string ruleset_;
+  std::string rulesetV2_;
 };
 
 struct PUBLISHER_STATE_ST {
@@ -153,6 +173,9 @@ struct CURRENT_RECONCILE {
   std::string viewingId_;
   SURVEYOR_INFO_ST surveyorInfo_;
   uint64_t timestamp_;
+  std::map<std::string, double> rates_;
+  std::string amount_;
+  std::string currency_;
 };
 
 enum URL_METHOD {
@@ -177,6 +200,8 @@ public:
   static void getJSONPublisherVerified(const std::string& json, bool& verified);
   static void getJSONWalletProperties(const std::string& json, WALLET_PROPERTIES_ST& walletProperties);
   static void getJSONUnsignedTx(const std::string& json, UNSIGNED_TX& unsignedTx);
+  static void getJSONTransaction(const std::string& json, TRANSACTION_ST& transaction);
+  static void getJSONRates(const std::string& json, std::map<std::string, double>& rates);
   static std::vector<uint8_t> generateSeed();
   static std::vector<uint8_t> getHKDF(const std::vector<uint8_t>& seed);
   static void getPublicKeyFromSeed(const std::vector<uint8_t>& seed,

@@ -45,6 +45,22 @@ RECONCILE_PAYLOAD_ST::~RECONCILE_PAYLOAD_ST() {}
 WALLET_INFO_ST::WALLET_INFO_ST() {}
 WALLET_INFO_ST::~WALLET_INFO_ST() {}
 
+TRANSACTION_ST::TRANSACTION_ST() {}
+TRANSACTION_ST::TRANSACTION_ST(const TRANSACTION_ST& transaction) {
+  viewingId_ = transaction.viewingId_;
+  surveyorId_ = transaction.surveyorId_;
+  contribution_fiat_amount_ = transaction.contribution_fiat_amount_;
+  contribution_fiat_currency_ = transaction.contribution_fiat_currency_;
+  contribution_rates_ = transaction.contribution_rates_;
+  contribution_altcurrency_ = transaction.contribution_altcurrency_;
+  contribution_probi_ = transaction.contribution_probi_;
+  contribution_fee_ = transaction.contribution_fee_;
+  submissionStamp_ = transaction.submissionStamp_;
+  submissionId_ = transaction.submissionId_;
+  contribution_rates_ = transaction.contribution_rates_;
+}
+TRANSACTION_ST::~TRANSACTION_ST() {}
+
 CLIENT_STATE_ST::CLIENT_STATE_ST():
   bootStamp_(0),
   reconcileStamp_(0),
@@ -264,6 +280,115 @@ void BatHelper::getJSONState(const std::string& json, CLIENT_STATE_ST& state) {
     DCHECK(!keyInfoSeed.empty());
     state.walletInfo_.keyInfoSeed_ = BatHelper::getFromBase64(keyInfoSeed);
   }
+  if (childTopDictionary->Get("transactions", &value)) {
+    const base::ListValue *lValue = nullptr;
+    value->GetAsList(&lValue);
+    for (size_t i = 0; i < lValue->GetSize(); i++) {
+      TRANSACTION_ST transaction;
+      const base::DictionaryValue* transactionDictionary = nullptr;
+      lValue->GetDictionary(i, &transactionDictionary);
+      if (nullptr == transactionDictionary) {
+        continue;
+      }
+      if (transactionDictionary->Get("viewingId", &value)) {
+        value->GetAsString(&transaction.viewingId_);
+      }
+      if (transactionDictionary->Get("surveyorId", &value)) {
+        value->GetAsString(&transaction.surveyorId_);
+      }
+      if (transactionDictionary->Get("contribution_fiat_amount", &value)) {
+        value->GetAsString(&transaction.contribution_fiat_amount_);
+      }
+      if (transactionDictionary->Get("contribution_fiat_currency", &value)) {
+        value->GetAsString(&transaction.contribution_fiat_currency_);
+      }
+      if (transactionDictionary->Get("rates.ETH", &value)) {
+        double dValue = 0;
+        value->GetAsDouble(&dValue);
+        transaction.contribution_rates_.insert(std::pair<std::string, double>("ETH", dValue));
+      }
+      if (transactionDictionary->Get("rates.LTC", &value)) {
+        double dValue = 0;
+        value->GetAsDouble(&dValue);
+        transaction.contribution_rates_.insert(std::pair<std::string, double>("LTC", dValue));
+      }
+      LOG(ERROR) << "!!!here5";
+      if (transactionDictionary->Get("rates.BTC", &value)) {
+        double dValue = 0;
+        value->GetAsDouble(&dValue);
+        transaction.contribution_rates_.insert(std::pair<std::string, double>("BTC", dValue));
+      }
+      if (transactionDictionary->Get("rates.USD", &value)) {
+        double dValue = 0;
+        value->GetAsDouble(&dValue);
+        transaction.contribution_rates_.insert(std::pair<std::string, double>("USD", dValue));
+      }
+      if (transactionDictionary->Get("rates.EUR", &value)) {
+        double dValue = 0;
+        value->GetAsDouble(&dValue);
+        transaction.contribution_rates_.insert(std::pair<std::string, double>("EUR", dValue));
+      }
+      if (transactionDictionary->Get("contribution_altcurrency", &value)) {
+        value->GetAsString(&transaction.contribution_altcurrency_);
+      }
+      if (transactionDictionary->Get("contribution_probi", &value)) {
+        value->GetAsString(&transaction.contribution_probi_);
+      }
+      if (transactionDictionary->Get("contribution_fee", &value)) {
+        value->GetAsString(&transaction.contribution_fee_);
+      }
+      if (transactionDictionary->Get("submissionStamp", &value)) {
+        value->GetAsString(&transaction.submissionStamp_);
+      }
+      if (transactionDictionary->Get("submissionId", &value)) {
+        value->GetAsString(&transaction.submissionId_);
+      }
+
+      state.transactions_.push_back(transaction);
+    }
+  }
+}
+
+void BatHelper::getJSONRates(const std::string& json, std::map<std::string, double>& rates) {
+  std::unique_ptr<base::Value> json_object = base::JSONReader::Read(json);
+  if (nullptr == json_object.get()) {
+      LOG(ERROR) << "BatHelper::getJSONWalletProperties: incorrect json object";
+
+      return;
+  }
+
+  const base::DictionaryValue* childTopDictionary = nullptr;
+  json_object->GetAsDictionary(&childTopDictionary);
+  if (nullptr == childTopDictionary) {
+      return;
+  }
+
+  const base::Value* value = nullptr;
+  if (childTopDictionary->Get("rates.ETH", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    rates.insert(std::pair<std::string, double>("ETH", dValue));
+  }
+  if (childTopDictionary->Get("rates.LTC", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    rates.insert(std::pair<std::string, double>("LTC", dValue));
+  }
+  if (childTopDictionary->Get("rates.BTC", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    rates.insert(std::pair<std::string, double>("BTC", dValue));
+  }
+  if (childTopDictionary->Get("rates.USD", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    rates.insert(std::pair<std::string, double>("USD", dValue));
+  }
+  if (childTopDictionary->Get("rates.EUR", &value)) {
+    double dValue = 0;
+    value->GetAsDouble(&dValue);
+    rates.insert(std::pair<std::string, double>("EUR", dValue));
+  }
 }
 
 void BatHelper::getJSONWalletProperties(const std::string& json, WALLET_PROPERTIES_ST& walletProperties) {
@@ -337,6 +462,34 @@ void BatHelper::getJSONWalletProperties(const std::string& json, WALLET_PROPERTI
   }
   if (childTopDictionary->Get("parameters.adFree.days", &value)) {
     value->GetAsInteger((int*)&walletProperties.parameters_days_);
+  }
+}
+
+void BatHelper::getJSONTransaction(const std::string& json, TRANSACTION_ST& transaction) {
+  std::unique_ptr<base::Value> json_object = base::JSONReader::Read(json);
+  if (nullptr == json_object.get()) {
+      LOG(ERROR) << "BatHelper::getJSONUnsignedTx: incorrect json object";
+
+      return;
+  }
+
+  const base::DictionaryValue* childTopDictionary = nullptr;
+  json_object->GetAsDictionary(&childTopDictionary);
+  if (nullptr == childTopDictionary) {
+      return;
+  }
+
+  const base::Value* value = nullptr;
+  if (childTopDictionary->Get("paymentStamp", &value)) {
+    double stamp(0);
+    value->GetAsDouble(&stamp);
+    transaction.submissionStamp_ = std::to_string((unsigned long long)stamp);
+  }
+  if (childTopDictionary->Get("probi", &value)) {
+    value->GetAsString(&transaction.contribution_probi_);
+  }
+  if (childTopDictionary->Get("altcurrency", &value)) {
+    value->GetAsString(&transaction.contribution_altcurrency_);
   }
 }
 
@@ -725,6 +878,32 @@ std::string BatHelper::stringifyState(const CLIENT_STATE_ST& state) {
   wallet_info_dict->SetString("addressLTC", state.walletInfo_.addressLTC_);
   wallet_info_dict->SetString("keyInfoSeed_", BatHelper::getBase64(state.walletInfo_.keyInfoSeed_));
   root_dict.Set("wallet_info", std::move(wallet_info_dict));
+
+  std::unique_ptr<base::ListValue> transactions(new base::ListValue());
+  for (size_t i = 0; i < state.transactions_.size(); i++) {
+    std::unique_ptr<base::DictionaryValue> transaction_dict(new base::DictionaryValue());
+    transaction_dict->SetString("viewingId", state.transactions_[i].viewingId_);
+    transaction_dict->SetString("surveyorId", state.transactions_[i].surveyorId_);
+    transaction_dict->SetString("contribution_fiat_amount", state.transactions_[i].contribution_fiat_amount_);
+    transaction_dict->SetString("contribution_fiat_currency", state.transactions_[i].contribution_fiat_currency_);
+    std::unique_ptr<base::DictionaryValue> contribution_rates_dict(new base::DictionaryValue());
+    for (std::map<std::string, double>::const_iterator iter = state.transactions_[i].contribution_rates_.begin();
+        iter != state.transactions_[i].contribution_rates_.end(); iter++) {
+      contribution_rates_dict->SetDouble(iter->first, iter->second);
+    }
+    transaction_dict->Set("rates", std::move(contribution_rates_dict));
+    //transaction_dict->SetString("contribution_rates", state.transactions_[i].contribution_rates_);
+    transaction_dict->SetString("contribution_altcurrency", state.transactions_[i].contribution_altcurrency_);
+    transaction_dict->SetString("contribution_probi", state.transactions_[i].contribution_probi_);
+    transaction_dict->SetString("contribution_fee", state.transactions_[i].contribution_fee_);
+    transaction_dict->SetString("submissionStamp", state.transactions_[i].submissionStamp_);
+    transaction_dict->SetString("submissionId", state.transactions_[i].submissionId_);
+    transactions->Append(std::make_unique<base::Value>(transaction_dict->Clone()));
+  }
+  root_dict.Set("transactions", std::move(transactions));
+
+  root_dict.SetString("ruleset", state.ruleset_);
+  root_dict.SetString("rulesetV4", state.rulesetV2_);
 
   base::JSONWriter::Write(root_dict, &res);
 
