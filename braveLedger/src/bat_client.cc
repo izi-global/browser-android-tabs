@@ -336,7 +336,7 @@ void BatClient::updateRulesCallback(bool result, const std::string& response, co
     // TODO errors handling
     return;
   }
-  state.ruleset_ = response;
+  state_.ruleset_ = response;
 
   batClientWebRequest_.run(buildURL(UPDATE_RULES_V2, ""),
     base::Bind(&BatClient::updateRulesV2Callback,
@@ -351,7 +351,7 @@ void BatClient::updateRulesV2Callback(bool result, const std::string& response, 
     return;
   }
   // TODO parse the return rulesetV2
-  state.rulesetV2_ = response;
+  state_.rulesetV2_ = response;
 }
 
 }
