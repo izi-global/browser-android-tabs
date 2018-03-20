@@ -19,6 +19,8 @@
 #define WALLET_PROPERTIES               "/v2/wallet/"
 #define WALLET_PROPERTIES_END           "/balance"
 #define RECONCILE_CONTRIBUTION          "/surveyor/contribution/current/"
+#define UPDATE_RULES_V1                 "/v1/publisher/ruleset?consequential=true"
+#define UPDATE_RULES_V2                 "/v2/publisher/ruleset?limit=512&excludedOnly=false"
 
 #define REGISTRARVK_FIELDNAME           "registrarVK"
 #define VERIFICATION_FIELDNAME          "verification"
