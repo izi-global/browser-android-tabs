@@ -1471,6 +1471,10 @@ void WebContentsImpl::SetLastActiveTime(base::TimeTicks last_active_time) {
   last_active_time_ = last_active_time;
 }
 
+base::TimeTicks WebContentsImpl::GetLastHiddenTime() const {
+  return last_hidden_time_;
+}
+
 void WebContentsImpl::WasShown() {
   const Visibility previous_visibility = GetVisibility();
 
@@ -1513,6 +1517,11 @@ void WebContentsImpl::WasHidden() {
 
     SendPageMessage(new PageMsg_WasHidden(MSG_ROUTING_NONE));
   }
+
+  last_hidden_time_ = base::TimeTicks::Now();
+
+  for (auto& observer : observers_)
+    observer.WasHidden();
 
   should_normally_be_visible_ = false;
   NotifyVisibilityChanged(previous_visibility);
