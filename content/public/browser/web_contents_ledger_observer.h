@@ -16,8 +16,10 @@ public:
   WebContentsLedgerObserver(WebContents* web_contents);
   ~WebContentsLedgerObserver() override;
 
-  void WasShown() override;
-  void WasHidden() override;
+  //void WasShown() override;
+  //void WasHidden() override;
+  // Invoked every time the WebContents changes visibility.
+  void OnVisibilityChanged(Visibility visibility) override;
 
   void WebContentsDestroyed() override;
   void DidFinishLoad(RenderFrameHost* render_frame_host,

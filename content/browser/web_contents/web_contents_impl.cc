@@ -1520,8 +1520,8 @@ void WebContentsImpl::WasHidden() {
 
   last_hidden_time_ = base::TimeTicks::Now();
 
-  for (auto& observer : observers_)
-    observer.WasHidden();
+  /*for (auto& observer : observers_)
+    observer.WasHidden();*/
 
   should_normally_be_visible_ = false;
   NotifyVisibilityChanged(previous_visibility);

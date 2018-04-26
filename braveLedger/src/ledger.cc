@@ -271,7 +271,9 @@ namespace ledger {
     LOG(ERROR) << "!!!ballotsCount == " << ballotsCount;
     std::vector<WINNERS_ST> winners = bat_publisher_->winners(ballotsCount);
     for (size_t i = 0; i < winners.size(); i++) {
-      if (!bat_publisher_->isEligableForContribution(winners[i].publisher_data_))
+      if (!bat_publisher_->isEligableForContribution(winners[i].publisher_data_)) {
+        // TODO
+      }
     }
   }
 

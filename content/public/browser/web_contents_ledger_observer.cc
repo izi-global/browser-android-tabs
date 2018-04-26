@@ -29,7 +29,24 @@ WebContentsLedgerObserver::WebContentsLedgerObserver(WebContents* web_contents)
 WebContentsLedgerObserver::~WebContentsLedgerObserver() {
 }
 
-void WebContentsLedgerObserver::WasShown() {
+void WebContentsLedgerObserver::OnVisibilityChanged(Visibility visibility) {
+  if (visibility == Visibility::VISIBLE) {
+    if (web_contents_->GetLastCommittedURL().is_valid() && web_contents_->GetLastCommittedURL().SchemeIsHTTPOrHTTPS()) {
+      current_domain_ = web_contents_->GetLastCommittedURL().host();
+    }
+    last_active_time_ = web_contents_->GetLastActiveTime();
+  } else {
+    if (current_domain_.empty()) {
+      return;
+    }
+    content::BrowserThread::PostTask(
+        content::BrowserThread::IO, FROM_HERE,
+        base::Bind(&WebSiteWasHidden, g_browser_process->io_thread(), current_domain_,
+      (web_contents_->GetLastHiddenTime().since_origin() - last_active_time_.since_origin()).InMilliseconds()));
+  }
+}
+
+/*void WebContentsLedgerObserver::WasShown() {
   if (web_contents_->GetLastCommittedURL().is_valid() && web_contents_->GetLastCommittedURL().SchemeIsHTTPOrHTTPS()) {
     current_domain_ = web_contents_->GetLastCommittedURL().host();
   }
@@ -44,7 +61,7 @@ void WebContentsLedgerObserver::WasHidden() {
       content::BrowserThread::IO, FROM_HERE,
       base::Bind(&WebSiteWasHidden, g_browser_process->io_thread(), current_domain_,
     (web_contents_->GetLastHiddenTime().since_origin() - last_active_time_.since_origin()).InMilliseconds()));
-}
+}*/
 
 void WebContentsLedgerObserver::WebContentsDestroyed() {
   is_being_destroyed_ = true;
