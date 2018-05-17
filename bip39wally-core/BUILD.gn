@@ -1,0 +1,49 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if (is_android) {
+  import("//build/config/android/rules.gni")
+}
+
+static_library("bip39wally-core") {
+  sources = [
+    "src/aes.cc",
+    "src/base58.cc",
+    "src/bip32.cc",
+    "src/bip38.cc",
+    "src/bip39.cc",
+    "src/bech32.cc",
+    "src/elements.cc",
+    "src/hextop.cc",
+    "src/hmac.cc",
+    "src/internal.cc",
+    "src/mnemonic.cc",
+    "src/pbkdf2.cc",
+    "src/script.cc",
+    "src/scrypt.cc",
+    "src/sign.cc",
+    "src/transaction.cc",
+    "src/wordlist.cc",
+    "src/ccan/ccan/crypto/ripemd160/ripemd160.cc",
+    "src/ccan/ccan/crypto/sha256/sha256.cc",
+    "src/ccan/ccan/crypto/sha512/sha512.cc",
+    "src/ccan/ccan/str/hex/hex.cc",
+    "src/secp256k1/src/secp256k1.cc"
+  ]
+
+  #if (current_cpu == "x86") {
+  #  sources += [ "relic/src/arch/relic_arch_x86.c" ]
+  #} else {
+  #  sources += [ "relic/src/arch/relic_arch_arm.c" ]
+  #}
+
+
+  include_dirs = [
+    "include",
+    "src/secp256k1/include",
+    "src/secp256k1/src",
+  ]
+
+  defines = [ "USE_NUM_NONE", "USE_FIELD_10X26", "USE_FIELD_INV_BUILTIN", "USE_SCALAR_8X32", "USE_SCALAR_INV_BUILTIN", "ENABLE_MODULE_GENERATOR", "ENABLE_MODULE_RANGEPROOF", "ENABLE_MODULE_ECDH", "ENABLE_MODULE_SURJECTIONPROOF" ]
+}

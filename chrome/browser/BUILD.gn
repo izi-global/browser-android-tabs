@@ -1612,12 +1612,14 @@ jumbo_split_static_library("browser") {
     "//anonize2/relic/include",
     "//anonize2/relic/include/low",
     "//braveLedger/src",
+    "//bip39wally-core/include",
   ]
 
   deps = [
     ":active_use_util",
     ":resource_prefetch_predictor_proto",
     "//anonize2",
+    "//bip39wally-core",
     "//braveLedger",
     "//base:i18n",
     "//base/allocator:buildflags",

@@ -736,37 +736,45 @@ void BatHelper::getJSONWalletInfo(const std::string& json, WALLET_INFO_ST& walle
       return;
   }
   const base::Value* value = nullptr;
+  std::string prefix = "wallet.";
   if (childTopDictionary->Get("wallet.paymentId", &value)) {
     value->GetAsString(&walletInfo.paymentId_);
     DCHECK(!walletInfo.paymentId_.empty());
+  } else {
+    prefix = "";
   }
-  if (childTopDictionary->Get("wallet.addresses.BAT", &value)) {
+  if (childTopDictionary->Get(prefix + "addresses.BAT", &value)) {
     value->GetAsString(&walletInfo.addressBAT_);
     DCHECK(!walletInfo.addressBAT_.empty());
   }
-  if (childTopDictionary->Get("wallet.addresses.BTC", &value)) {
+  if (childTopDictionary->Get(prefix + "addresses.BTC", &value)) {
     value->GetAsString(&walletInfo.addressBTC_);
     DCHECK(!walletInfo.addressBTC_.empty());
   }
-  if (childTopDictionary->Get("wallet.addresses.CARD_ID", &value)) {
+  if (childTopDictionary->Get(prefix + "addresses.CARD_ID", &value)) {
     value->GetAsString(&walletInfo.addressCARD_ID_);
     DCHECK(!walletInfo.addressCARD_ID_.empty());
   }
-  if (childTopDictionary->Get("wallet.addresses.ETH", &value)) {
+  if (childTopDictionary->Get(prefix + "addresses.ETH", &value)) {
     value->GetAsString(&walletInfo.addressETH_);
     DCHECK(!walletInfo.addressETH_.empty());
   }
-  if (childTopDictionary->Get("wallet.addresses.LTC", &value)) {
+  if (childTopDictionary->Get(prefix + "addresses.LTC", &value)) {
     value->GetAsString(&walletInfo.addressLTC_);
     DCHECK(!walletInfo.addressLTC_.empty());
   }
 
+  std::string fees = "payload.adFree.fee";
   if (childTopDictionary->Get("payload.adFree.days", &value)) {
     value->GetAsInteger((int*)&days);
     DCHECK(days != 0);
+  } else if (childTopDictionary->Get("parameters.adFree.days", &value)) {
+    value->GetAsInteger((int*)&days);
+    DCHECK(days != 0);
+    fees = "parameters.adFree.fee";
   }
   const base::DictionaryValue* feeDictionary = nullptr;
-  if (childTopDictionary->Get("payload.adFree.fee", &value)) {
+  if (childTopDictionary->Get(fees, &value)) {
     if (!value->GetAsDictionary(&feeDictionary)) {
       LOG(ERROR) << "BatHelper::getJSONWalletInfo: could not get fee object";
 

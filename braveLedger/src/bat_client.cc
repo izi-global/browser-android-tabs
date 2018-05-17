@@ -12,6 +12,7 @@
 #include "url_canon_stdstring.h"
 
 #include "anon.h"
+#include "wally_bip39.h"
 
 namespace bat_client {
 
@@ -530,6 +531,69 @@ void BatClient::prepareBallot(const BALLOT_ST& ballot, const TRANSACTION_ST& tra
 
 void BatClient::prepareBallotCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
   LOG(ERROR) << "!!!!prepareBallotCallback response == " << response;
+}
+
+std::string BatClient::getWalletPassphrase() {
+  DCHECK(state_.walletInfo_.keyInfoSeed_.size());
+  std::string passPhrase;
+  if (0 == state_.walletInfo_.keyInfoSeed_.size()) {
+    return passPhrase;
+  }
+    char* words = nullptr;
+  int result = bip39_mnemonic_from_bytes(nullptr, &state_.walletInfo_.keyInfoSeed_.front(),
+    state_.walletInfo_.keyInfoSeed_.size(), &words);
+  LOG(ERROR) << "!!!getWalletPassphrase result == " << result << ", !!!words == " << words;
+  if (0 != result) {
+    DCHECK(false);
+
+    return passPhrase;
+  }
+  passPhrase = words;
+  wally_free_string(words);
+
+  return passPhrase;
+}
+
+void BatClient::recoverWallet(const std::string& passPhrase) {
+  std::vector<unsigned char> newSeed;
+  newSeed.resize(32);
+  size_t written = 0;
+  int result = bip39_mnemonic_to_bytes(nullptr, passPhrase.c_str(), &newSeed.front(), newSeed.size(), &written);
+  LOG(ERROR) << "!!!recoverWallet result == " << result << "!!!result size == " << written;
+  if (0 != result || 0 == written) {
+    DCHECK(false);
+
+    return;
+  }
+  state_.walletInfo_.keyInfoSeed_ = newSeed;
+
+  std::vector<uint8_t> secretKey = BatHelper::getHKDF(state_.walletInfo_.keyInfoSeed_);
+  std::vector<uint8_t> publicKey;
+  std::vector<uint8_t> newSecretKey;
+  BatHelper::getPublicKeyFromSeed(secretKey, publicKey, newSecretKey);
+  std::string publicKeyHex = BatHelper::uint8ToHex(publicKey);
+
+  batClientWebRequest_.run(buildURL((std::string)RECOVER_WALLET_PUBLIC_KEY + publicKeyHex, ""),
+    base::Bind(&BatClient::recoverWalletPublicKeyCallback,
+      base::Unretained(this)), std::vector<std::string>(), "", "", FETCH_CALLBACK_EXTRA_DATA_ST(),
+      URL_METHOD::GET);
+}
+
+void BatClient::recoverWalletPublicKeyCallback(bool result, const std::string& response,
+    const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  //LOG(ERROR) << "!!!recoverWalletPublicKeyCallback == " << response;
+  std::string recoveryId = BatHelper::getJSONValue("paymentId", response);
+
+  batClientWebRequest_.run(buildURL((std::string)RECOVER_WALLET + recoveryId, ""),
+    base::Bind(&BatClient::recoverWalletCallback,
+      base::Unretained(this)), std::vector<std::string>(), "", "", FETCH_CALLBACK_EXTRA_DATA_ST(),
+      URL_METHOD::GET);
+}
+
+void BatClient::recoverWalletCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  //LOG(ERROR) << "!!!recoverWalletCallback == " << response;
+  BatHelper::getJSONWalletInfo(response, state_.walletInfo_, state_.fee_currency_, state_.fee_amount_, state_.days_);
+  BatHelper::saveState(state_);
 }
 
 }
