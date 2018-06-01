@@ -12,6 +12,7 @@
 #include "base/files/file_util.h"
 #include "base/sequenced_task_runner.h"
 #include "base/bind.h"
+#include "base/strings/utf_string_conversions.h"
 #include "base/task_scheduler/post_task.h"
 #include "chrome/browser/browser_process.h"
 #include "browser_thread.h"
@@ -154,6 +155,15 @@ WALLET_PROPERTIES_ST::~WALLET_PROPERTIES_ST() {}
 FETCH_CALLBACK_EXTRA_DATA_ST::FETCH_CALLBACK_EXTRA_DATA_ST():
   value1(0),
   boolean1(true) {}
+FETCH_CALLBACK_EXTRA_DATA_ST::FETCH_CALLBACK_EXTRA_DATA_ST(const FETCH_CALLBACK_EXTRA_DATA_ST& extraData):
+  value1(extraData.value1),
+  string1(extraData.string1),
+  string2(extraData.string2),
+  string3(extraData.string3),
+  string4(extraData.string4),
+  string5(extraData.string5),
+  boolean1(extraData.boolean1) {}
+
 FETCH_CALLBACK_EXTRA_DATA_ST::~FETCH_CALLBACK_EXTRA_DATA_ST() {}
 
 SURVEYOR_INFO_ST::SURVEYOR_INFO_ST() {}
@@ -168,6 +178,33 @@ UNSIGNED_TX::~UNSIGNED_TX() {}
 
 SURVEYOR_ST::SURVEYOR_ST() {}
 SURVEYOR_ST::~SURVEYOR_ST() {}
+
+MEDIA_PUBLISHER_INFO::MEDIA_PUBLISHER_INFO() {}
+MEDIA_PUBLISHER_INFO::MEDIA_PUBLISHER_INFO(const MEDIA_PUBLISHER_INFO& mediaPublisherInfo):
+  publisherName_(mediaPublisherInfo.publisherName_),
+  publisherURL_(mediaPublisherInfo.publisherURL_),
+  favIconURL_(mediaPublisherInfo.favIconURL_),
+  channelName_(mediaPublisherInfo.channelName_),
+  publisher_(mediaPublisherInfo.publisher_) {}
+MEDIA_PUBLISHER_INFO::~MEDIA_PUBLISHER_INFO() {}
+
+
+void split(std::vector<std::string>& tmp, std::string query, char delimiter)
+{
+  std::stringstream ss(query);
+  std::string item;
+  while (std::getline(ss, item, delimiter)) {
+    if (query[0] != '\n') {
+      tmp.push_back(item);
+    }
+  }
+}
+
+void DecodeURLChars(const std::string& input, std::string& output) {
+  url::RawCanonOutputW<1024> canonOutput;
+  url::DecodeURLEscapeSequences(input.c_str(), input.length(), &canonOutput);
+  output = base::UTF16ToUTF8(base::StringPiece16(canonOutput.data(), canonOutput.length()));
+}
 
 
 
@@ -1131,6 +1168,53 @@ std::string BatHelper::stringifyPublisherState(const PUBLISHER_STATE_ST& state) 
   return res;
 }
 
+void BatHelper::getJSONMediaPublisherInfo(const std::string& json, MEDIA_PUBLISHER_INFO& mediaPublisherInfo) {
+  std::unique_ptr<base::Value> json_object = base::JSONReader::Read(json);
+  if (nullptr == json_object.get()) {
+      LOG(ERROR) << "BatHelper::getJSONMediaPublisherInfo: incorrect json object";
+
+      return;
+  }
+
+  const base::DictionaryValue* childTopDictionary = nullptr;
+  json_object->GetAsDictionary(&childTopDictionary);
+  if (nullptr == childTopDictionary) {
+      return;
+  }
+  const base::Value* value = nullptr;
+  if (childTopDictionary->Get("publisherName", &value)) {
+    value->GetAsString(&mediaPublisherInfo.publisherName_);
+  }
+  if (childTopDictionary->Get("publisherURL", &value)) {
+    value->GetAsString(&mediaPublisherInfo.publisherURL_);
+  }
+  if (childTopDictionary->Get("favIconURL", &value)) {
+    value->GetAsString(&mediaPublisherInfo.favIconURL_);
+  }
+  if (childTopDictionary->Get("channelName", &value)) {
+    value->GetAsString(&mediaPublisherInfo.channelName_);
+  }
+  if (childTopDictionary->Get("publisher", &value)) {
+    value->GetAsString(&mediaPublisherInfo.publisher_);
+  }
+}
+
+std::string BatHelper::stringifyMediaPublisherInfo(const MEDIA_PUBLISHER_INFO& mediaPublisherInfo) {
+  std::string res;
+
+  base::DictionaryValue root_dict;
+
+  root_dict.SetString("publisherName", mediaPublisherInfo.publisherName_);
+  root_dict.SetString("publisherURL", mediaPublisherInfo.publisherURL_);
+  root_dict.SetString("favIconURL", mediaPublisherInfo.favIconURL_);
+  root_dict.SetString("channelName", mediaPublisherInfo.channelName_);
+  root_dict.SetString("publisher", mediaPublisherInfo.publisher_);
+
+  base::JSONWriter::Write(root_dict, &res);
+
+  return res;
+}
+
 std::string BatHelper::stringifyPublisher(const PUBLISHER_ST& publisher_st) {
   std::string res;
 
@@ -1318,6 +1402,96 @@ void BatHelper::loadPublisherState(BatHelper::ReadPublisherStateCallback callbac
          {base::MayBlock(), base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN});
   task_runner->PostTask(FROM_HERE, base::Bind(&BatHelper::readPublisherStateFile, callback));
 }
+
+void BatHelper::getUrlQueryParts(const std::string& query, std::map<std::string, std::string>& parts) {
+  std::vector<std::string> vars;
+  split(vars, query, '&');
+  for (size_t i = 0; i < vars.size(); i++) {
+    std::vector<std::string> var;
+    split(var, vars[i], '=');
+    if (var.size() != 2) {
+      continue;
+    }
+    std::string varName;
+    std::string varValue;
+    DecodeURLChars(var[0], varName);
+    DecodeURLChars(var[1], varValue);
+    parts[varName] = varValue;
+  }
+}
+
+std::string BatHelper::getMediaId(const std::map<std::string, std::string>& data, const std::string& type) {
+  if (YOUTUBE_MEDIA_TYPE == type) {
+    std::map<std::string, std::string>::const_iterator iter = data.find("docid");
+    if (iter != data.end()) {
+      return iter->second;
+    }
+  } else if (TWITCH_MEDIA_TYPE == type) {
+    // TODO
+  }
+
+  return "";
+}
+
+std::string BatHelper::getMediaKey(const std::string& mediaId, const std::string& type) {
+  return type + "_" + mediaId;
+}
+
+uint64_t BatHelper::getMediaDuration(const std::map<std::string, std::string>& data, const std::string& mediaKey, const std::string& type) {
+  uint64_t duration = 0;
+
+  if (YOUTUBE_MEDIA_TYPE == type) {
+    std::map<std::string, std::string>::const_iterator iterSt = data.find("st");
+    std::map<std::string, std::string>::const_iterator iterEt = data.find("et");
+    if (iterSt != data.end() && iterEt != data.end()) {
+      std::vector<std::string> startTime;
+      std::vector<std::string> endTime;
+      split(startTime, iterSt->second, ',');
+      split(endTime, iterEt->second, ',');
+      if (startTime.size() != endTime.size()) {
+        return 0;
+      }
+      float tempTime = 0;
+      for (size_t i = 0; i < startTime.size(); i++) {
+        std::stringstream tempET(endTime[i]);
+        std::stringstream tempST(startTime[i]);
+        float st = 0;
+        float et = 0;
+        tempET >> et;
+        tempST >> st;
+        tempTime = et - st;
+        //LOG(ERROR) << "!!!st == " << st;
+        //LOG(ERROR) << "!!!et == " << et;
+      }
+      duration = (uint64_t)(tempTime * 1000.0);
+    }
+  } else if (TWITCH_MEDIA_TYPE == type) {
+    // TODO
+  }
+
+  return duration;
+}
+
+/*std::string BatHelper::getHTMLItem(const std::string& html, const std::string& item) {
+  std::string res;
+
+  size_t pos = html.find(item);
+  LOG(ERROR) << "pos == " << pos;
+  if (pos != std::string::npos) {
+    pos = html.find("content=\"", pos);
+    LOG(ERROR) << "pos == " << pos;
+    if (pos != std::string::npos) {
+      size_t posEnd = html.find("\">", pos);
+      LOG(ERROR) << "posEnd == " << pos;
+      if (posEnd != std::string::npos) {
+        res = html.substr(pos + 9, posEnd - pos - 9);
+      }
+    }
+  }
+  LOG(ERROR) << "getHTMLItem res == " << res;
+
+  return res;
+}*/
 
 // Enable emscripten calls
 /*void BatHelper::readEmscriptenInternal() {

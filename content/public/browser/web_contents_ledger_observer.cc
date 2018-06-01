@@ -11,7 +11,7 @@
 #include "content/public/common/favicon_url.h"
 
 void WebSiteWasHidden(IOThread* io_thread, const std::string& url, uint64_t duration) {
-  io_thread->globals()->ledger_->saveVisit(url, duration);
+  io_thread->globals()->ledger_->saveVisit(url, duration, false);
 }
 
 void FavIconUpdated(IOThread* io_thread, const std::string& url, const std::string& favicon_url) {
