@@ -109,7 +109,7 @@ void BatClient::requestCredentialsCallback(bool result, const std::string& respo
   requestCredentials.request_headers_signature_ = headerSignature;
   requestCredentials.request_body_octets_ = octets;
   std::string payloadStringify = BatHelper::stringifyRequestCredentialsSt(requestCredentials);
-  //LOG(ERROR) << "!!!payloadStringify == " << payloadStringify1;
+  //LOG(ERROR) << "!!!payloadStringify == " << payloadStringify;
   std::vector<std::string> headers;
   headers.push_back("Content-Type: application/json; charset=UTF-8");
   // We should use simple callbacks on iOS
@@ -157,6 +157,10 @@ void BatClient::registerPersonaCallback(bool result, const std::string& response
   state_.bootStamp_ = BatHelper::currentTime() * 1000;
   state_.reconcileStamp_ = state_.bootStamp_ + state_.days_ * 24 * 60 * 60 * 1000;
   publisherTimestamp();
+
+  // TODO debug
+  //getPromotionCaptcha();
+  //
 }
 
 void BatClient::publisherTimestamp(const bool& saveState) {
@@ -670,6 +674,61 @@ void BatClient::recoverWalletCallback(bool result, const std::string& response, 
   //LOG(ERROR) << "!!!recoverWalletCallback == " << response;
   BatHelper::getJSONWalletInfo(response, state_.walletInfo_, state_.fee_currency_, state_.fee_amount_, state_.days_);
   BatHelper::saveState(state_);
+}
+
+void BatClient::getPromotion(const std::string& lang, const std::string& forPaymentId) {
+  std::string paymentId = forPaymentId;
+  if (paymentId.empty()) {
+    paymentId = state_.walletInfo_.paymentId_;
+  }
+  std::string arguments;
+  if (!paymentId.empty() || !lang.empty()) {
+    arguments = "?";
+    if (!paymentId.empty()) {
+      arguments += "paymentId=" + paymentId;
+    }
+    if (!lang.empty()) {
+      if (arguments.length() > 1) {
+        arguments += "&";
+      }
+      arguments += "lang=" + lang;
+    }
+  }
+
+  batClientWebRequest_.run(buildURL((std::string)GET_SET_PROMOTION + arguments, ""),
+    base::Bind(&BatClient::getPromotionCallback,
+      base::Unretained(this)), std::vector<std::string>(), "", "", FETCH_CALLBACK_EXTRA_DATA_ST(),
+      URL_METHOD::GET);
+}
+
+void BatClient::getPromotionCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  LOG(ERROR) << "!!!getPromotionCallback == " << response;
+}
+
+void BatClient::setPromotion(const std::string& promotionId, const std::string& captchaResponse) {
+  std::string keys[2] = {"promotionId", "captchaResponse"};
+  std::string values[2] = {promotionId, captchaResponse};
+  std::string payload = BatHelper::stringify(keys, values, 2);
+
+  batClientWebRequest_.run(buildURL((std::string)GET_SET_PROMOTION + "/" + state_.walletInfo_.paymentId_, ""),
+    base::Bind(&BatClient::setPromotionCallback,
+      base::Unretained(this)), std::vector<std::string>(), payload, "",
+      FETCH_CALLBACK_EXTRA_DATA_ST(), URL_METHOD::PUT);
+}
+
+void BatClient::setPromotionCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  LOG(ERROR) << "!!!setPromotionCallback == " << response;
+}
+
+void BatClient::getPromotionCaptcha() {
+  batClientWebRequest_.run(buildURL((std::string)GET_PROMOTION_CAPTCHA + state_.walletInfo_.paymentId_, ""),
+    base::Bind(&BatClient::getPromotionCaptchaCallback,
+      base::Unretained(this)), std::vector<std::string>(), "", "", FETCH_CALLBACK_EXTRA_DATA_ST(),
+      URL_METHOD::GET);
+}
+
+void BatClient::getPromotionCaptchaCallback(bool result, const std::string& response, const FETCH_CALLBACK_EXTRA_DATA_ST& extraData) {
+  LOG(ERROR) << "!!!getPromotionCaptchaCallback == " << response;
 }
 
 }
